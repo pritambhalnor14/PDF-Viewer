@@ -133,6 +133,15 @@
 
     <div class="separator"></div>
 
+    <!-- Fit Width -->
+    <button id="fit_width" title="Fit Width">
+      <svg viewBox="0 0 24 24">
+        <path d="M21 18v3H3v-3h2v1h14v-1h2zm0-12V3H3v3h2V5h14v1h2zM6 10h12v4H6z" />
+      </svg>
+    </button>
+
+    <div class="separator"></div>
+
     <!-- Zoom -->
     <button id="zoom_out" title="Zoom Out">
       <svg viewBox="0 0 24 24">
@@ -283,6 +292,28 @@
       }
     });
 
+    // Fit Width Logic
+    function fitToWidth() {
+      if (!pdfDoc) return;
+      pdfDoc.getPage(pageNum).then(function (page) {
+        const viewport = page.getViewport({
+          scale: 1.0
+        });
+        const container = document.getElementById('viewer-container');
+        // Subtract some padding/scrollbar width
+        const availableWidth = container.clientWidth - 20;
+        scale = availableWidth / viewport.width;
+        renderPage(pageNum);
+      });
+    }
+
+    document.getElementById('fit_width').addEventListener('click', fitToWidth);
+
+    // Window Resize Listener
+    window.addEventListener('resize', function () {
+      fitToWidth();
+    });
+
     // Print Logic
     document.getElementById('print').addEventListener('click', async function () {
       const printContainer = document.getElementById('print-container');
@@ -345,18 +376,20 @@
       }
     });
 
-    if (url) {
-      pdfjsLib.getDocument(url).promise.then(function (pdfDoc_) {
-        pdfDoc = pdfDoc_;
+    if (!url) {
+      document.body.innerHTML = '<h2>No PDF file specified</h2>';
+    } else {
+      // Asynchronous download of PDF
+      const loadingTask = pdfjsLib.getDocument(url);
+      loadingTask.promise.then(function (pdf) {
+        pdfDoc = pdf;
         document.getElementById('page_count').textContent = pdfDoc.numPages;
-        renderPage(pageNum);
+        // Initial render with Fit Width
+        fitToWidth();
       }, function (reason) {
         // PDF loading error
         console.error(reason);
-        document.body.innerHTML = '<h2 style="color:red; padding: 20px;">Error loading PDF: ' + reason + '</h2>';
       });
-    } else {
-      document.body.innerHTML = '<h2>No PDF file specified</h2>';
     }
   </script>
 </body>
