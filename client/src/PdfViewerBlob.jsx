@@ -4,6 +4,7 @@ import Viewer from './viewer';
 
 const PdfViewerBlob = () => {
     const [pdfUrl, setPdfUrl] = useState(null);
+    const [fileName, setFileName] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -21,6 +22,7 @@ const PdfViewerBlob = () => {
                     const blob = new Blob([bytes], { type: 'application/pdf' });
                     const url = URL.createObjectURL(blob);
                     setPdfUrl(url);
+                    setFileName(response.data.fileName);
                 } else {
                     setError('No PDF data received');
                 }
@@ -48,7 +50,7 @@ const PdfViewerBlob = () => {
     return (
         <div style={{ height: '100vh', width: '100%' }}>
             {pdfUrl ? (
-                <Viewer url={pdfUrl} />
+                <Viewer url={pdfUrl} fileName={fileName} />
             ) : (
                 <div>No PDF to display</div>
             )}

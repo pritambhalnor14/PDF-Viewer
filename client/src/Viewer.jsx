@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Viewer({ url }) {
+export default function Viewer({ url, fileName }) {
     return (
         <div style={{ width: '70vw', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#e0e0e0' }}>
             {/* <div style={{ padding: '10px', textAlign: 'right' }}>
@@ -11,7 +11,7 @@ export default function Viewer({ url }) {
             <div style={{ flex: 1, position: 'relative' }}> */}
             {url ? (
                 <object
-                    data={`/viewer.html?file=${encodeURIComponent(url)}`}
+                    data={`/viewer.html?file=${encodeURIComponent(url)}&fileName=${encodeURIComponent(fileName || 'document.pdf')}`}
                     type="text/html"
                     width="100%"
                     height="100%"
@@ -19,7 +19,7 @@ export default function Viewer({ url }) {
                 >
                     <div style={{ padding: '20px', textAlign: 'center' }}>
                         <p>Unable to display PDF viewer.</p>
-                        <a href={url} download="document.pdf" style={{ color: 'blue', textDecoration: 'underline' }}>Download PDF</a>
+                        <a href={url} download={fileName || "document.pdf"} style={{ color: 'blue', textDecoration: 'underline' }}>Download PDF</a>
                     </div>
                 </object>
             ) : (

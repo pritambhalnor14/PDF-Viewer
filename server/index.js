@@ -17,7 +17,8 @@ app.get('/api/pdf', (req, res) => {
         if (fs.existsSync(filePath)) {
             const fileBuffer = fs.readFileSync(filePath);
             const base64Data = fileBuffer.toString('base64');
-            res.json({ base64: base64Data });
+            const fileName = path.basename(filePath);
+            res.json({ base64: base64Data, fileName: fileName });
         } else {
             res.status(404).json({ error: 'File not found' });
         }
