@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function Viewer({ url }) {
     return (
-        <div style={{ width: '100vw', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#e0e0e0' }}>
+        <div style={{ width: '70vw', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#e0e0e0' }}>
             {/* <div style={{ padding: '10px', textAlign: 'right' }}>
                 <a href={url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', borderRadius: '4px' }}>
                     Open PDF in New Tab

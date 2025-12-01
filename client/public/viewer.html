@@ -8,63 +8,116 @@
     body {
       margin: 0;
       padding: 0;
-      background-color: #e0e0e0;
+      background-color: #525659;
+      /* Dark background for the viewer area */
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-family: sans-serif;
-    }
-
-    #the-canvas {
-      border: 1px solid black;
-      direction: ltr;
-      margin: 10px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
     }
 
     #controls {
-      padding: 10px;
-      background: #333;
-      color: white;
+      padding: 5px 10px;
+      background: #f8f9fa;
+      /* Light background for controls */
+      border-bottom: 1px solid #dadce0;
+      color: #3c4043;
       width: 100%;
-      text-align: center;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      box-sizing: border-box;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
-      gap: 15px;
+      gap: 5px;
+      height: 40px;
+    }
+
+    .separator {
+      width: 1px;
+      height: 20px;
+      background-color: #dadce0;
+      margin: 0 5px;
     }
 
     button {
       cursor: pointer;
-      padding: 5px;
-      background: #555;
-      color: white;
+      padding: 4px;
+      background: transparent;
+      color: #5f6368;
       border: none;
-      border-radius: 3px;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
+      min-width: 28px;
+      min-height: 28px;
     }
 
     button:hover {
-      background: #666;
+      background-color: #e8eaed;
+      color: #202124;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
 
     button svg {
-      fill: white;
-      width: 24px;
-      height: 24px;
+      fill: currentColor;
+      width: 20px;
+      height: 20px;
     }
 
-    input[type="number"] {
-      width: 50px;
+    #page_num_input {
+      width: 40px;
       text-align: center;
       padding: 4px;
-      border-radius: 3px;
-      border: 1px solid #ccc;
+      border-radius: 4px;
+      border: 1px solid #dadce0;
+      color: #3c4043;
+      font-size: 13px;
+      margin: 0 5px;
+    }
+
+    #page_num_input:focus {
+      outline: 2px solid #1a73e8;
+      border-color: transparent;
+    }
+
+    .page-info {
+      font-size: 13px;
+      color: #5f6368;
+      margin-right: 10px;
+    }
+
+    .zoom-info {
+      font-size: 13px;
+      color: #5f6368;
+      min-width: 50px;
+      text-align: center;
+      background: #e8eaed;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-left: 5px;
+    }
+
+    #viewer-container {
+      flex: 1;
+      overflow: auto;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #the-canvas {
+      border: 1px solid #dadce0;
+      direction: ltr;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+      background-color: white;
     }
 
     /* Print Styles */
@@ -72,13 +125,12 @@
       body {
         background-color: white;
         display: block;
+        height: auto;
+        overflow: visible;
       }
 
-      #controls {
-        display: none;
-      }
-
-      #the-canvas {
+      #controls,
+      #viewer-container {
         display: none;
       }
 
@@ -106,32 +158,46 @@
 
 <body>
   <div id="controls">
+    <!-- Pagination -->
     <button id="prev" title="Previous Page">
       <svg viewBox="0 0 24 24">
         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
       </svg>
     </button>
+
+    <div class="separator"></div>
+
     <button id="next" title="Next Page">
       <svg viewBox="0 0 24 24">
         <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
       </svg>
     </button>
 
-    <span>
-      Page: <input type="number" id="page_num_input" value="1" min="1"> / <span id="page_count"></span>
-    </span>
+    <input type="number" id="page_num_input" value="1" min="1">
+    <span class="page-info">of <span id="page_count">--</span></span>
 
+    <div class="separator"></div>
+
+    <!-- Zoom -->
     <button id="zoom_out" title="Zoom Out">
       <svg viewBox="0 0 24 24">
         <path d="M19 13H5v-2h14v2z" />
       </svg>
     </button>
+
+    <div class="separator"></div>
+
     <button id="zoom_in" title="Zoom In">
       <svg viewBox="0 0 24 24">
         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
       </svg>
     </button>
 
+    <span id="zoom_level" class="zoom-info">100%</span>
+
+    <div style="flex: 1;"></div> <!-- Spacer -->
+
+    <!-- Actions -->
     <button id="print" title="Print">
       <svg viewBox="0 0 24 24">
         <path
@@ -148,6 +214,7 @@
   </div>
 
   <canvas id="the-canvas"></canvas>
+
   <div id="print-container"></div>
 
   <script type="module">
@@ -163,10 +230,15 @@
       pageNum = 1,
       pageRendering = false,
       pageNumPending = null,
-      scale = 1.5,
+      scale = 1.0, // Start at 100%
       canvas = document.getElementById('the-canvas'),
       ctx = canvas.getContext('2d'),
-      pageNumInput = document.getElementById('page_num_input');
+      pageNumInput = document.getElementById('page_num_input'),
+      zoomLevelDisplay = document.getElementById('zoom_level');
+
+    function updateZoomDisplay() {
+      zoomLevelDisplay.textContent = Math.round(scale * 100) + '%';
+    }
 
     function renderPage(num) {
       pageRendering = true;
@@ -197,6 +269,7 @@
 
       // Update page counters
       pageNumInput.value = num;
+      updateZoomDisplay();
     }
 
     function queueRenderPage(num) {
@@ -238,13 +311,13 @@
 
     // Zoom Logic
     document.getElementById('zoom_in').addEventListener('click', function () {
-      scale += 0.2;
+      scale += 0.25; // Larger increments
       queueRenderPage(pageNum);
     });
 
     document.getElementById('zoom_out').addEventListener('click', function () {
-      if (scale > 0.5) {
-        scale -= 0.2;
+      if (scale > 0.25) {
+        scale -= 0.25;
         queueRenderPage(pageNum);
       }
     });
@@ -260,7 +333,7 @@
       const printBtn = document.getElementById('print');
       // Save original content (icon)
       const originalContent = printBtn.innerHTML;
-      printBtn.innerHTML = '...'; // Simple text for loading state or keep icon with spinner? Let's just use text for simplicity or keep it simple.
+      printBtn.innerHTML = '...';
       printBtn.disabled = true;
 
       try {
