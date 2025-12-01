@@ -39,15 +39,24 @@
 
     button {
       cursor: pointer;
-      padding: 5px 10px;
+      padding: 5px;
       background: #555;
       color: white;
       border: none;
       border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     button:hover {
       background: #666;
+    }
+
+    button svg {
+      fill: white;
+      width: 24px;
+      height: 24px;
     }
 
     input[type="number"] {
@@ -97,17 +106,39 @@
 
 <body>
   <div id="controls">
-    <button id="prev">Previous</button>
-    <button id="next">Next</button>
+    <button id="prev" title="Previous Page">
+      <svg viewBox="0 0 24 24">
+        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+      </svg>
+    </button>
+    <button id="next" title="Next Page">
+      <svg viewBox="0 0 24 24">
+        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+      </svg>
+    </button>
 
     <span>
       Page: <input type="number" id="page_num_input" value="1" min="1"> / <span id="page_count"></span>
     </span>
 
-    <button id="zoom_out">Zoom -</button>
-    <button id="zoom_in">Zoom +</button>
+    <button id="zoom_out" title="Zoom Out">
+      <svg viewBox="0 0 24 24">
+        <path d="M19 13H5v-2h14v2z" />
+      </svg>
+    </button>
+    <button id="zoom_in" title="Zoom In">
+      <svg viewBox="0 0 24 24">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+      </svg>
+    </button>
 
-    <button id="print">Print</button>
+    <button id="print" title="Print">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h3v4h12v-4h3v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" />
+        <circle cx="18" cy="11.5" r="1" />
+      </svg>
+    </button>
   </div>
 
   <canvas id="the-canvas"></canvas>
@@ -135,7 +166,9 @@
       pageRendering = true;
       // Fetch page
       pdfDoc.getPage(num).then(function (page) {
-        var viewport = page.getViewport({ scale: scale });
+        var viewport = page.getViewport({
+          scale: scale
+        });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
@@ -219,14 +252,17 @@
 
       // Disable button to prevent multiple clicks
       const printBtn = document.getElementById('print');
-      const originalText = printBtn.textContent;
-      printBtn.textContent = 'Preparing...';
+      // Save original content (icon)
+      const originalContent = printBtn.innerHTML;
+      printBtn.innerHTML = '...'; // Simple text for loading state or keep icon with spinner? Let's just use text for simplicity or keep it simple.
       printBtn.disabled = true;
 
       try {
         for (let i = 1; i <= pdfDoc.numPages; i++) {
           const page = await pdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: printScale });
+          const viewport = page.getViewport({
+            scale: printScale
+          });
 
           const canvasWrapper = document.createElement('div');
           canvasWrapper.className = 'print-page';
@@ -234,10 +270,6 @@
           const printCanvas = document.createElement('canvas');
           printCanvas.height = viewport.height;
           printCanvas.width = viewport.width;
-
-          // Adjust style for printing to fit page
-          // printCanvas.style.width = '100%'; 
-          // printCanvas.style.height = 'auto';
 
           const renderContext = {
             canvasContext: printCanvas.getContext('2d'),
@@ -256,11 +288,8 @@
         console.error('Print error:', error);
         alert('Error preparing print document.');
       } finally {
-        printBtn.textContent = originalText;
+        printBtn.innerHTML = originalContent;
         printBtn.disabled = false;
-        // Optional: Clear print container after printing to free memory? 
-        // Keeping it might be useful if user cancels and prints again immediately.
-        // printContainer.innerHTML = ''; 
       }
     });
 
