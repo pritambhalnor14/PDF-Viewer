@@ -139,6 +139,12 @@
         <circle cx="18" cy="11.5" r="1" />
       </svg>
     </button>
+
+    <button id="download" title="Download">
+      <svg viewBox="0 0 24 24">
+        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+      </svg>
+    </button>
   </div>
 
   <canvas id="the-canvas"></canvas>
@@ -290,6 +296,18 @@
       } finally {
         printBtn.innerHTML = originalContent;
         printBtn.disabled = false;
+      }
+    });
+
+    // Download Logic
+    document.getElementById('download').addEventListener('click', function () {
+      if (url) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.pdf'; // You could try to get a filename from somewhere if available
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     });
 
