@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
+    }
+
+    #the-canvas {
+      border: 1px solid black;
+      direction: ltr;
+      margin: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    #controls {
+      padding: 10px;
+      background: #333;
+      color: white;
+      width: 100%;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+    }
+
+    button {
+      cursor: pointer;
+      padding: 5px 10px;
+      background: #555;
+      color: white;
+      border: none;
+      border-radius: 3px;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    input[type="number"] {
+      width: 50px;
+      text-align: center;
+      padding: 4px;
+      border-radius: 3px;
+      border: 1px solid #ccc;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background-color: white;
+        display: block;
+      }
+
+      #controls {
+        display: none;
+      }
+
+      #the-canvas {
+        display: none;
+      }
+
+      /* Hide the interactive canvas */
+      #print-container {
+        display: block !important;
+      }
+
+      .print-page {
+        page-break-after: always;
+        display: block;
+        margin: 0 auto;
+      }
+
+      canvas {
+        max-width: 100%;
+      }
+    }
+
+    #print-container {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="controls">
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+
+    <span>
+      Page: <input type="number" id="page_num_input" value="1" min="1"> / <span id="page_count"></span>
+    </span>
+
+    <button id="zoom_out">Zoom -</button>
+    <button id="zoom_in">Zoom +</button>
+
+    <button id="print">Print</button>
+  </div>
+
+  <canvas id="the-canvas"></canvas>
+  <div id="print-container"></div>
+
+  <script type="module">
+    import * as pdfjsLib from './pdf.min.mjs';
+
+    // The workerSrc property shall be specified.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const url = urlParams.get('file');
+
+    let pdfDoc = null,
+      pageNum = 1,
+      pageRendering = false,
+      pageNumPending = null,
+      scale = 1.5,
+      canvas = document.getElementById('the-canvas'),
+      ctx = canvas.getContext('2d'),
+      pageNumInput = document.getElementById('page_num_input');
+
+    function renderPage(num) {
+      pageRendering = true;
+      // Fetch page
+      pdfDoc.getPage(num).then(function (page) {
+        var viewport = page.getViewport({ scale: scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Render PDF page into canvas context
+        var renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        };
+        var renderTask = page.render(renderContext);
+
+        // Wait for render to finish
+        renderTask.promise.then(function () {
+          pageRendering = false;
+          if (pageNumPending !== null) {
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
+        });
+      });
+
+      // Update page counters
+      pageNumInput.value = num;
+    }
+
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending = num;
+      } else {
+        renderPage(num);
+      }
+    }
+
+    function onPrevPage() {
+      if (pageNum <= 1) {
+        return;
+      }
+      pageNum--;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('prev').addEventListener('click', onPrevPage);
+
+    function onNextPage() {
+      if (pageNum >= pdfDoc.numPages) {
+        return;
+      }
+      pageNum++;
+      queueRenderPage(pageNum);
+    }
+    document.getElementById('next').addEventListener('click', onNextPage);
+
+    // Pagination Input
+    pageNumInput.addEventListener('change', function () {
+      let num = parseInt(this.value);
+      if (num >= 1 && num <= pdfDoc.numPages) {
+        pageNum = num;
+        queueRenderPage(pageNum);
+      } else {
+        this.value = pageNum; // Reset to current page if invalid
+      }
+    });
+
+    // Zoom Logic
+    document.getElementById('zoom_in').addEventListener('click', function () {
+      scale += 0.2;
+      queueRenderPage(pageNum);
+    });
+
+    document.getElementById('zoom_out').addEventListener('click', function () {
+      if (scale > 0.5) {
+        scale -= 0.2;
+        queueRenderPage(pageNum);
+      }
+    });
+
+    // Print Logic
+    document.getElementById('print').addEventListener('click', async function () {
+      const printContainer = document.getElementById('print-container');
+      printContainer.innerHTML = ''; // Clear previous
+
+      const printScale = 2.0; // Higher quality for print
+
+      // Disable button to prevent multiple clicks
+      const printBtn = document.getElementById('print');
+      const originalText = printBtn.textContent;
+      printBtn.textContent = 'Preparing...';
+      printBtn.disabled = true;
+
+      try {
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+          const page = await pdfDoc.getPage(i);
+          const viewport = page.getViewport({ scale: printScale });
+
+          const canvasWrapper = document.createElement('div');
+          canvasWrapper.className = 'print-page';
+
+          const printCanvas = document.createElement('canvas');
+          printCanvas.height = viewport.height;
+          printCanvas.width = viewport.width;
+
+          // Adjust style for printing to fit page
+          // printCanvas.style.width = '100%'; 
+          // printCanvas.style.height = 'auto';
+
+          const renderContext = {
+            canvasContext: printCanvas.getContext('2d'),
+            viewport: viewport
+          };
+
+          await page.render(renderContext).promise;
+
+          canvasWrapper.appendChild(printCanvas);
+          printContainer.appendChild(canvasWrapper);
+        }
+
+        window.print();
+
+      } catch (error) {
+        console.error('Print error:', error);
+        alert('Error preparing print document.');
+      } finally {
+        printBtn.textContent = originalText;
+        printBtn.disabled = false;
+        // Optional: Clear print container after printing to free memory? 
+        // Keeping it might be useful if user cancels and prints again immediately.
+        // printContainer.innerHTML = ''; 
+      }
+    });
+
+    if (url) {
+      pdfjsLib.getDocument(url).promise.then(function (pdfDoc_) {
+        pdfDoc = pdfDoc_;
+        document.getElementById('page_count').textContent = pdfDoc.numPages;
+        renderPage(pageNum);
+      }, function (reason) {
+        // PDF loading error
+        console.error(reason);
+        document.body.innerHTML = '<h2 style="color:red; padding: 20px;">Error loading PDF: ' + reason + '</h2>';
+      });
+    } else {
+      document.body.innerHTML = '<h2>No PDF file specified</h2>';
+    }
+  </script>
+</body>
+
+</html>
